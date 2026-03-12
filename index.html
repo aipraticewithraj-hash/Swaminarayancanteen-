@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swaminarayan Canteen</title>
+
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+<style>
+
+body{
+background:#f3f4f6;
+font-family:sans-serif;
+}
+
+.card{
+border-radius:15px;
+box-shadow:0 8px 20px rgba(0,0,0,0.1);
+transition:0.3s;
+}
+
+.card:hover{
+transform:scale(1.03);
+}
+
+.btn{
+background:#ff6600;
+color:white;
+padding:8px 15px;
+border-radius:20px;
+}
+
+.cart-btn{
+position:fixed;
+bottom:20px;
+right:20px;
+background:#ff6600;
+color:white;
+padding:15px;
+border-radius:50%;
+font-size:20px;
+}
+
+.badge{
+position:absolute;
+top:-5px;
+right:-5px;
+background:red;
+color:white;
+border-radius:50%;
+padding:2px 6px;
+font-size:12px;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+
+<header class="bg-white shadow p-4 flex justify-between">
+
+<h1 class="text-xl font-bold text-orange-600">
+Swaminarayan Canteen
+</h1>
+
+<div>
+📞 9624601096
+</div>
+
+</header>
+
+
+<!-- CATEGORY FILTER -->
+
+<div class="p-4 flex space-x-3 overflow-x-auto">
+
+<button onclick="filterMenu('all')" class="btn">All</button>
+<button onclick="filterMenu('Breakfast')" class="btn">Breakfast</button>
+<button onclick="filterMenu('Lunch')" class="btn">Lunch</button>
+<button onclick="filterMenu('Snacks')" class="btn">Snacks</button>
+<button onclick="filterMenu('Beverages')" class="btn">Beverages</button>
+
+</div>
+
+
+<!-- MENU GRID -->
+
+<div id="menu" class="grid grid-cols-2 md:grid-cols-3 gap-4 p-4"></div>
+
+
+
+<!-- CART BUTTON -->
+
+<div class="cart-btn" onclick="openCart()">
+
+🛒
+<span id="cartCount" class="badge">0</span>
+
+</div>
+
+
+
+<!-- CART MODAL -->
+
+<div id="cartModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+
+<div class="bg-white p-5 rounded w-96 max-h-screen overflow-auto">
+
+<h2 class="text-lg font-bold mb-4">Your Cart</h2>
+
+<div id="cartItems"></div>
+
+<div class="mt-4 font-bold">
+Total: ₹ <span id="cartTotal">0</span>
+</div>
+
+<button onclick="checkout()" class="btn mt-4 w-full">
+Checkout
+</button>
+
+<button onclick="closeCart()" class="mt-2 text-red-500 w-full">
+Close
+</button>
+
+</div>
+</div>
+
+
+
+<!-- PAYMENT PAGE -->
+
+<div id="paymentPage" class="hidden p-6 text-center">
+
+<h2 class="text-xl font-bold mb-4">Scan & Pay</h2>
+
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=dpruthviraj675@okicici" class="mx-auto">
+
+<p class="mt-2">UPI ID: dpruthviraj675@okicici</p>
+
+<input id="customerName" placeholder="Your Name" class="border p-2 mt-4 w-full">
+
+<input id="customerPhone" placeholder="Phone Number" class="border p-2 mt-2 w-full">
+
+<button onclick="confirmOrder()" class="btn mt-4 w-full">
+Confirm Order
+</button>
+
+</div>
+
+
+
+<!-- ADMIN PANEL -->
+
+<div class="p-6">
+
+<h2 class="text-xl font-bold">Admin Dashboard</h2>
+
+<div id="orders"></div>
+
+</div>
+
+
+<script>
+
+
+const placeholder="https://images.unsplash.com/photo-1546069901-ba9599a7e63c";
+
+
+const menu=[
+{name:"Poha",price:30,category:"Breakfast"},
+{name:"Thepla",price:40,category:"Breakfast"},
+{name:"Dal Rice",price:70,category:"Lunch"},
+{name:"Roti Sabji",price:60,category:"Lunch"},
+{name:"Samosa",price:20,category:"Snacks"},
+{name:"Tea",price:10,category:"Beverages"},
+{name:"Coffee",price:20,category:"Beverages"}
+];
+
+
+let cart=[];
+
+
+
+function renderMenu(list){
+
+const menuDiv=document.getElementById("menu");
+
+menuDiv.innerHTML="";
+
+list.forEach((item,i)=>{
+
+menuDiv.innerHTML+=`
+
+<div class="card bg-white">
+
+<img src="${placeholder}" class="w-full h-32 object-cover rounded-t">
+
+<div class="p-3">
+
+<h3 class="font-bold">${item.name}</h3>
+
+<p class="text-sm text-gray-500">${item.category}</p>
+
+<p class="text-orange-600 font-bold">₹${item.price}</p>
+
+<button class="btn mt-2 w-full" onclick="addToCart(${i})">
+Add to Cart
+</button>
+
+</div>
+
+</div>
+
+`
+
+})
+
+}
+
+
+
+function filterMenu(cat){
+
+if(cat==="all"){
+renderMenu(menu)
+}
+else{
+
+renderMenu(menu.filter(m=>m.category===cat))
+
+}
+
+}
+
+
+
+function addToCart(i){
+
+const item=menu[i];
+
+const existing=cart.find(c=>c.name===item.name);
+
+if(existing){
+existing.qty++
+}else{
+cart.push({...item,qty:1})
+}
+
+updateCart()
+
+}
+
+
+
+function updateCart(){
+
+document.getElementById("cartCount").innerText=
+cart.reduce((a,b)=>a+b.qty,0);
+
+const cartDiv=document.getElementById("cartItems");
+
+cartDiv.innerHTML="";
+
+let total=0;
+
+cart.forEach((item,i)=>{
+
+total+=item.price*item.qty;
+
+cartDiv.innerHTML+=`
+
+<div class="flex justify-between mt-2">
+
+<div>
+${item.name} x ${item.qty}
+</div>
+
+<div>
+₹${item.price*item.qty}
+</div>
+
+</div>
+
+`
+
+})
+
+document.getElementById("cartTotal").innerText=total;
+
+}
+
+
+
+function openCart(){
+
+document.getElementById("cartModal").classList.remove("hidden")
+
+}
+
+function closeCart(){
+
+document.getElementById("cartModal").classList.add("hidden")
+
+}
+
+
+
+function checkout(){
+
+closeCart()
+
+document.getElementById("paymentPage").classList.remove("hidden")
+
+}
+
+
+
+let orders=[]
+
+
+
+function confirmOrder(){
+
+const name=document.getElementById("customerName").value;
+
+const phone=document.getElementById("customerPhone").value;
+
+const total=document.getElementById("cartTotal").innerText;
+
+orders.push({name,phone,items:[...cart],total,time:new Date().toLocaleTimeString()})
+
+cart=[]
+
+updateCart()
+
+alert("Order Placed!")
+
+renderOrders()
+
+}
+
+
+
+function renderOrders(){
+
+const div=document.getElementById("orders");
+
+div.innerHTML="";
+
+orders.forEach(o=>{
+
+div.innerHTML+=`
+
+<div class="card bg-white p-3 mt-3">
+
+<b>${o.name}</b> (${o.phone})
+
+<p>Total: ₹${o.total}</p>
+
+<p>${o.time}</p>
+
+</div>
+
+`
+
+})
+
+}
+
+
+
+renderMenu(menu)
+
+</script>
+
+</body>
+  </html>
